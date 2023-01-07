@@ -6,8 +6,9 @@ import enum
 import collections
 import logging
 import zlib
+import brotli
 
-HeaderTuple = collections.namedtuple('HeaderTuple', ('pack_len', 'raw_header_size', 'ver', 'operation', 'seq_id'))
+HeaderTuple = collections.namedtuple('HeaderTuple', ('packet_len', 'header_len', 'ver', 'op', 'seq_id'))
 header_struct = struct.Struct('>I2H2I')
 
 class ProtoVer(enum.IntEnum):
@@ -16,13 +17,13 @@ class ProtoVer(enum.IntEnum):
     DEFLATE = 2
     BROTLI = 3
 
-class Operation(enum.IntEnum):
+class CMD(enum.IntEnum):
     HANDSHAKE = 0
     HANDSHAKE_REPLY = 1
     HEARTBEAT = 2
     HEARTBEAT_REPLY = 3
     SEND_MSG = 4
-    SEND_MSG_REPLY = 5
+    DANMU_MSG = 5 # 弹幕
     DISCONNECT_REPLY = 6
     AUTH = 7
     AUTH_REPLY = 8
@@ -42,10 +43,10 @@ class Operation(enum.IntEnum):
 def make_packet(data: dict, operation: int):
     body = json.dumps(data).encode('UTF-8')
     header = header_struct.pack(*HeaderTuple(
-        pack_len=header_struct.size + len(body),
-        raw_header_size=header_struct.size,
+        packet_len=header_struct.size + len(body),
+        header_len=header_struct.size,
         ver=1,
-        operation=operation,
+        op=operation,
         seq_id=1
     ))
     return header + body
@@ -58,23 +59,52 @@ async def send_auth(ws: aiohttp.ClientWebSocketResponse):
         'platform': 'web',
         'type': 2
     }
-    await ws.send_bytes(make_packet(auth_params, Operation.AUTH))
+    await ws.send_bytes(make_packet(auth_params, CMD.AUTH))
 
 async def send_heartbeat(ws: aiohttp.ClientWebSocketResponse):
     while True:
         await asyncio.sleep(30)
-        await ws.send_bytes(make_packet({},Operation.HEARTBEAT))
+        await ws.send_bytes(make_packet({},CMD.HEARTBEAT))
 
-async def parse_ws_msg(ws: aiohttp.ClientWebSocketResponse):
+async def parse_msg_reply(header: HeaderTuple, body: bytes):
+    print()
+
+async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
     async for msg in ws:
-        print(msg.type)
+        # offset = 0
+        header = HeaderTuple(*header_struct.unpack_from(msg.data, 0))
+        print(header)
+        if header.op == CMD.DANMU_MSG:
+            body = msg.data[header.header_len: header.packet_len]
+            if header.ver == ProtoVer.BROTLI:
+                # 该消息为完整包被压缩后再加上头，所以需要去头解压再去头才能得到真实信息
+                decoded_packet = brotli.decompress(body)
+                decoded_packet_header = HeaderTuple(*header_struct.unpack_from(decoded_packet, 0))
+                data = decoded_packet[decoded_packet_header.header_len: decoded_packet_header.packet_len]
+                text = data.decode('utf-8')
+                j = json.loads(text)
+                print(j)
+
+            # body = json.loads(body.decode('utf-8'))
+            # print(body)
+            # parse_msg_reply(header, body)
+            # print(header)
+            # # 弹幕消息，存在数据量大被分包的情况
+            # while True:
+            #     # 切片，获取主干内容
+            #     body = msg.data[offset + header.raw_header_size: offset + header.pack_len]
+            #     await parse_msg_reply(header, body)
+            #     offset += header.pack_len
+            #     if offset >= len(msg.data):
+            #         break
+            #     header = HeaderTuple(*header_struct.unpack_from(msg.data, offset))
 
 async def main():
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect('wss://broadcastlv.chat.bilibili.com/sub') as ws:
             await send_auth(ws)
             heartbeat_task = asyncio.create_task(send_heartbeat(ws))
-            parse_ws_msg_task = asyncio.create_task(parse_ws_msg(ws))
+            parse_ws_msg_task = asyncio.create_task(handle_ws_msg(ws))
             await asyncio.gather(heartbeat_task, parse_ws_msg_task)
 
 if __name__ == '__main__':
