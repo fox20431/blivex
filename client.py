@@ -87,14 +87,16 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
                 data = decoded_packet[decoded_packet_header.header_len: decoded_packet_header.packet_len]
                 text = data.decode('utf-8')
                 danmu_msg_obj = json.loads(text)
+                print(danmu_msg_obj)
                 # danmu_msg_json = json.dumps(danmu_msg_obj)
                 # print(danmu_msg_json)
-                danmu_msg_text = danmu_msg_obj['info'][1]
-                danmu_msg_user = danmu_msg_obj['info'][2][1]
-                # print(danmu_msg)
-                engine.say(f"{danmu_msg_user}说：{danmu_msg_text}")
-                engine.runAndWait()
-                engine.stop()
+                if danmu_msg_obj['cmd'] == 'DANMU_MSG':
+                    danmu_msg_text = danmu_msg_obj['info'][1]
+                    danmu_msg_user = danmu_msg_obj['info'][2][1]
+                    # print(danmu_msg)
+                    engine.say(f"{danmu_msg_user}说：{danmu_msg_text}")
+                    engine.runAndWait()
+                    engine.stop()
 
             # body = json.loads(body.decode('utf-8'))
             # print(body)
