@@ -5,11 +5,15 @@ import struct
 import enum
 import collections
 import logging
-import zlib
 import brotli
+import pyttsx3
 
 HeaderTuple = collections.namedtuple('HeaderTuple', ('packet_len', 'header_len', 'ver', 'op', 'seq_id'))
 header_struct = struct.Struct('>I2H2I')
+
+engine = pyttsx3.init() # object creation
+engine.setProperty('voice', 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_ZH-CN_HUIHUI_11.0') 
+
 
 class ProtoVer(enum.IntEnum):
     NORMAL = 0
@@ -82,8 +86,15 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
                 decoded_packet_header = HeaderTuple(*header_struct.unpack_from(decoded_packet, 0))
                 data = decoded_packet[decoded_packet_header.header_len: decoded_packet_header.packet_len]
                 text = data.decode('utf-8')
-                j = json.loads(text)
-                print(j)
+                danmu_msg_obj = json.loads(text)
+                # danmu_msg_json = json.dumps(danmu_msg_obj)
+                # print(danmu_msg_json)
+                danmu_msg_text = danmu_msg_obj['info'][1]
+                danmu_msg_user = danmu_msg_obj['info'][2][1]
+                # print(danmu_msg)
+                engine.say(f"{danmu_msg_user}说：{danmu_msg_text}")
+                engine.runAndWait()
+                engine.stop()
 
             # body = json.loads(body.decode('utf-8'))
             # print(body)
