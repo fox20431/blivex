@@ -1,0 +1,5 @@
+name: blivex
+scopes:
+  - "./*"
+scripts:
+  - "python main.py"

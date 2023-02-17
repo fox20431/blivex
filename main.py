@@ -86,15 +86,16 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
                     danmu_msg_user = danmu_msg_obj['info'][2][1]
                     # print(danmu_msg)
                     engine.say(f"{danmu_msg_user}说：{danmu_msg_text}")
+                    # if '只因' in danmu_msg_text:
+                    #     engine.say(f"基尼台煤")
                     engine.runAndWait()
                     engine.stop()
 
                 # 进入直播间或关注直播间事件
                 if danmu_msg_obj['cmd'] == 'INTERACT_WORD':
                     interact_word_uname = danmu_msg_obj['data']['uname']
-                    danmu_msg_user = danmu_msg_obj['info'][2][1]
                     # print(danmu_msg)
-                    engine.say(f"欢迎{danmu_msg_user}进入直播间")
+                    engine.say(f"欢迎{interact_word_uname}进入直播间")
                     engine.runAndWait()
                     engine.stop()
 
