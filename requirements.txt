@@ -1,3 +1,5 @@
 aiohttp
 brotli
 pyttsx3
+pipdub
+pyaudio

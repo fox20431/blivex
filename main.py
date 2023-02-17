@@ -7,6 +7,8 @@ import collections
 import logging
 import brotli
 import pyttsx3
+from pydub import AudioSegment
+import pyaudio
 
 # logging init
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -19,6 +21,18 @@ header_struct = struct.Struct('>I2H2I')
 # pyttsx3 init
 engine = pyttsx3.init() # object creation
 engine.setProperty('voice', 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_ZH-CN_HUIHUI_11.0') 
+
+# prepare the audio
+
+niganma_audio_file = AudioSegment.from_file(r"C:\Users\ming\projects\blivex\assets\niganma.mp3", format="mp3")
+niganma_audio_data = niganma_audio_file.raw_data
+# 初始化音频流对象
+niganma_audio_stream = pyaudio.PyAudio().open(
+    format=pyaudio.paInt16,
+    channels=niganma_audio_file.channels,
+    rate=niganma_audio_file.frame_rate,
+    output=True
+)
 
 class ProtoVer(enum.IntEnum):
     NORMAL = 0
@@ -86,8 +100,8 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
                     danmu_msg_user = danmu_msg_obj['info'][2][1]
                     # print(danmu_msg)
                     engine.say(f"{danmu_msg_user}说：{danmu_msg_text}")
-                    # if '只因' in danmu_msg_text:
-                    #     engine.say(f"基尼台煤")
+                    if '干嘛' in danmu_msg_text:
+                        niganma_audio_stream.write(niganma_audio_data)
                     engine.runAndWait()
                     engine.stop()
 
@@ -109,3 +123,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+    niganma_audio_stream.close()
