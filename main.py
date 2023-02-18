@@ -48,6 +48,16 @@ class OP(enum.IntEnum):
     AUTH = 7
     AUTH_REPLY = 8
 
+class CMD(str, enum.Enum):
+    # 直播间改变
+    ROOM_CHANGE = "ROOM_CHANGE"
+    # 推流提示
+    LIVE = "LIVE"
+    # 弹幕信息
+    DANMU_MSG = "DANMU_MSG"
+    # 用户进入直播间
+    INTERACT_WORD = "INTERACT_WORD"
+
 def make_packet(data: dict, operation: int):
     body = json.dumps(data).encode('UTF-8')
     header = header_struct.pack(*HeaderTuple(
@@ -95,7 +105,7 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
                 # print(danmu_msg_json)
 
                 # 弹幕信息
-                if danmu_msg_obj['cmd'] == 'DANMU_MSG':
+                if danmu_msg_obj['cmd'] == CMD.DANMU_MSG:
                     danmu_msg_text = danmu_msg_obj['info'][1]
                     danmu_msg_user = danmu_msg_obj['info'][2][1]
                     # print(danmu_msg)
@@ -105,8 +115,8 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse):
                     engine.runAndWait()
                     engine.stop()
 
-                # 进入直播间或关注直播间事件
-                if danmu_msg_obj['cmd'] == 'INTERACT_WORD':
+                # 进入直播间
+                if danmu_msg_obj['cmd'] == CMD.INTERACT_WORD:
                     interact_word_uname = danmu_msg_obj['data']['uname']
                     # print(danmu_msg)
                     engine.say(f"欢迎{interact_word_uname}进入直播间")
