@@ -4,13 +4,11 @@ import json
 import struct
 import enum
 import collections
-import logging
 import brotli
-from queue import Queue
+import config
+from logger import get_logger
 
-# logging init
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # bussness data structure
 HeaderTuple = collections.namedtuple('HeaderTuple', ('packet_len', 'header_len', 'ver', 'op', 'seq_id'))
@@ -30,16 +28,6 @@ class OP(enum.IntEnum):
     AUTH = 7
     AUTH_REPLY = 8
 
-class CMD(str, enum.Enum):
-    # 直播间改变
-    ROOM_CHANGE = "ROOM_CHANGE"
-    # 推流提示
-    LIVE = "LIVE"
-    # 弹幕信息
-    DANMU_MSG = "DANMU_MSG"
-    # 用户进入直播间
-    INTERACT_WORD = "INTERACT_WORD"
-
 def make_packet(data: dict, operation: int):
     body = json.dumps(data).encode('UTF-8')
     header = header_struct.pack(*HeaderTuple(
@@ -54,7 +42,8 @@ def make_packet(data: dict, operation: int):
 async def send_auth(ws: aiohttp.ClientWebSocketResponse):
     auth_params = {
         'uid': 0,
-        'roomid': 10341336,
+        # 'roomid': 10341336,
+        'roomid': config.room_id,
         'protover': 3,
         'platform': 'web',
         'type': 2
@@ -81,23 +70,8 @@ async def handle_ws_msg(ws: aiohttp.ClientWebSocketResponse, queue: asyncio.Queu
                 decoded_packet_header = HeaderTuple(*header_struct.unpack_from(decoded_packet, 0))
                 data = decoded_packet[decoded_packet_header.header_len: decoded_packet_header.packet_len]
                 text = data.decode('utf-8')
-                danmaku_obj = json.loads(text)
-                logger.info(danmaku_obj)
-                # danmaku_msg_json = json.dumps(danmaku_msg_obj)
-                # print(danmaku_msg_json)
+                await queue.put(text)
 
-                # 弹幕信息
-                if danmaku_obj['cmd'] == CMD.DANMU_MSG:
-                    danmaku_text = danmaku_obj['info'][1]
-                    danmaku_user = danmaku_obj['info'][2][1]
-                    # print(danmaku_msg)
-                    await queue.put(danmaku_text)
-
-
-                # 进入直播间
-                if danmaku_obj['cmd'] == CMD.INTERACT_WORD:
-                    interact_word_uname = danmaku_obj['data']['uname']
-                    # print(danmaku_msg)
 
 async def fetch(queue: asyncio.Queue):
     async with aiohttp.ClientSession() as session:

@@ -2,6 +2,10 @@ import asyncio
 from fetch_live import fetch
 from live_reader import read_danmaku
 
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 async def main():
     queue = asyncio.Queue()
 
