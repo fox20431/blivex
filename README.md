@@ -4,6 +4,13 @@ inspired by: https://github.com/xfgryujk/blivedm
 
 ## How to run it?
 
+(Optional) Create the virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
 1. Install the requirements:
 
 ```bash

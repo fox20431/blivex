@@ -1,6 +1,2 @@
 aiohttp
 brotli
-pyttsx3
-pydub
-pyaudio
-PyQt6

@@ -1,3 +1,5 @@
+__all__ = ['get_logger']
+
 import logging
 
 def get_logger(name):
